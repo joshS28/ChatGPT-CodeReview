@@ -76,6 +76,22 @@ export const robot = (app: Probot) => {
         return 'no target label attached';
       }
 
+      // Delete previous comments by github-actions
+      const { data: comments } = await context.octokit.issues.listComments({
+        owner: repo.owner,
+        repo: repo.repo,
+        issue_number: context.pullRequest().pull_number,
+      });
+
+      const actionComments = comments.filter(comment => comment.user.login === 'github-actions[bot]');
+      for (const comment of actionComments) {
+        await context.octokit.issues.deleteComment({
+          owner: repo.owner,
+          repo: repo.repo,
+          comment_id: comment.id,
+        });
+      }
+
       const data = await context.octokit.repos.compareCommits({
         owner: repo.owner,
         repo: repo.repo,
@@ -88,19 +104,6 @@ export const robot = (app: Probot) => {
       log.debug("compareCommits, base:", context.payload.pull_request.base.sha, "head:", context.payload.pull_request.head.sha)
       log.debug("compareCommits.commits:", commits)
       log.debug("compareCommits.files", changedFiles)
-
-      if (context.payload.action === 'synchronize' && commits.length >= 2) {
-        const {
-          data: { files },
-        } = await context.octokit.repos.compareCommits({
-          owner: repo.owner,
-          repo: repo.repo,
-          base: commits[commits.length - 2].sha,
-          head: commits[commits.length - 1].sha,
-        });
-
-        changedFiles = files
-      }
 
       const ignoreList = (process.env.IGNORE || process.env.ignore || '')
           .split('\n')
@@ -172,7 +175,7 @@ export const robot = (app: Probot) => {
           repo: repo.repo,
           owner: repo.owner,
           pull_number: context.pullRequest().pull_number,
-          body: "Code review by ChatGPT",
+          body: "Josh's Code Review",
           event: 'COMMENT',
           commit_id: commits[commits.length - 1].sha,
           comments: ress,
