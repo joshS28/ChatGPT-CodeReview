@@ -92,6 +92,9 @@ export const robot = (app: Probot) => {
         });
       }
 
+      log.info(`comments deleted: ${actionComments.length}`);
+      log.info(`comments: `, actionComments);
+
       const data = await context.octokit.repos.compareCommits({
         owner: repo.owner,
         repo: repo.repo,
